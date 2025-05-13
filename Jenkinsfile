@@ -2,44 +2,33 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'registration-page'  // The name of your Docker image
-        DOCKER_TAG = 'latest'               // Tag for your Docker image
+        DOCKER_HUB_USERNAME = '43753'
+        IMAGE_NAME = 'devops'
+        DOCKER_CREDENTIALS_ID = 'DevOps'  
+        DOCKER_REGISTRY = 'https://index.docker.io/v1/'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repo') {
             steps {
-                // Checkout the code from your GitHub repository
-                git branch: 'main', url: 'https://github.com/Mahnoor86/DevOpsProject.git'
+                git 'https://github.com/Mahnoor86/DevOpsProject.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image
-                    sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
+                    dockerImage = docker.build("${DOCKER_HUB_USERNAME}/${IMAGE_NAME}:latest")
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Push the image to Docker Hub
-                    sh "docker push $DOCKER_IMAGE:$DOCKER_TAG"
-                }
-            }
-        }
-
-        stage('Deploy to Minikube') {
-            steps {
-                script {
-                    // Set up Minikube (if you're deploying to Minikube)
-                    sh 'eval $(minikube -p minikube docker-env)'
-
-                    // Deploy to Minikube
-                    sh 'kubectl apply -f deployment.yaml'
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        dockerImage.push('latest')
+                    }
                 }
             }
         }
@@ -47,7 +36,7 @@ pipeline {
 
     post {
         always {
-            cleanWs()  // Clean workspace after every run
+            echo 'Pipeline finished.'
         }
     }
 }
